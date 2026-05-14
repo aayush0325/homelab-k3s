@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kache-deployment
+  namespace: kache
+  labels:
+    app: kache
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: kache
+  template:
+    metadata:
+      labels:
+        app: kache
+    spec:
+      containers:
+      - name: kache
+        image: aayush0325/kache:v1.0
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "500m"
+          limits:
+            memory: "256Mi"
+            cpu: "1"
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - configMapRef:
+            name: kache-config
