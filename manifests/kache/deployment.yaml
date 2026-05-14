@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: kache
-        image: aayush0325/kache:v1.0
+        image: aayush0325/kache:v1.1
         resources:
           requests:
             memory: "128Mi"
