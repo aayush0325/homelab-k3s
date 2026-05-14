@@ -21,7 +21,7 @@ spec:
         image: redis:8.6.3
         args:
         - --appendonly
-        - yes
+        - "yes"
         resources:
           requests:
             memory: "256Mi"
