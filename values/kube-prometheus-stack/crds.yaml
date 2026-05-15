@@ -1,0 +1,52 @@
+crds:
+  enabled: true
+
+prometheusOperator:
+  enabled: false
+
+alertmanager:
+  enabled: false
+
+grafana:
+  enabled: false
+
+kubeApiServer:
+  enabled: false
+
+kubelet:
+  enabled: false
+
+kubeControllerManager:
+  enabled: false
+
+coreDns:
+  enabled: false
+
+kubeEtcd:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+kubeProxy:
+  enabled: false
+
+kubeStateMetrics:
+  enabled: false
+
+nodeExporter:
+  enabled: false
+
+prometheus:
+  enabled: false
+
+prometheusAgent:
+  enabled: false
+
+thanosRuler:
+  enabled: false
+
+additionalPrometheusRulesMap: {}
+
+defaultRules:
+  create: false

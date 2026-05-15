@@ -1,10 +1,10 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: kube-prometheus-stack
+  name: kube-prometheus-stack-crds
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   project: default
   sources:
@@ -13,7 +13,7 @@ spec:
       targetRevision: 85.0.2
       helm:
         valueFiles:
-          - $values/values/kube-prometheus-stack/values.yaml
+          - $values/values/kube-prometheus-stack/crds.yaml
     - repoURL: https://github.com/aayush0325/homelab-k3s.git
       targetRevision: HEAD
       ref: values
