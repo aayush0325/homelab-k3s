@@ -150,6 +150,68 @@ crds:
   enabled: false   # CRDs managed by kube-prometheus-stack-crds app
 ```
 
+## Post-Fix: Prometheus Operator Stall After Sync
+
+After the CRDs and main app both synced successfully, ArgoCD showed the `kube-prometheus-stack` app stuck in `Progressing` / `Syncing` state with the message:
+
+```
+waiting for healthy state of monitoring.coreos.com/Prometheus/kube-prometheus-stack-prometheus
+```
+
+**Symptoms:**
+- Prometheus CR existed but had no status (`.status` was empty)
+- Alertmanager CR existed but had no status
+- No `prometheus-kube-prometheus-stack-prometheus-0` or `alertmanager-kube-prometheus-stack-alertmanager-0` pods were created
+- All other components (Grafana, kube-state-metrics, node-exporter) were healthy and running
+- Operator logs showed `TLS handshake error from ... remote error: tls: bad certificate` around startup time
+
+**Root Cause:**
+
+The Prometheus Operator pod was hit by a burst of TLS errors from the K8s API server trying to reach its admission webhook immediately after startup — before the operator had finished initializing its internal certificate watch. This caused the operator to miss the initial reconciliation of the Prometheus and Alertmanager CRs. Once the TLS errors subsided, the operator entered a steady state but never re-processed the CRs because it had already marked them as "observed" in its informer cache.
+
+**Diagnosis commands:**
+```bash
+# Check if Prometheus/Alertmanager pods exist
+kubectl get pods -n monitoring
+# → Only grafana, operator, node-exporter, kube-state-metrics were running
+
+# Check if CRs have status
+kubectl get prometheus -n monitoring
+# → DESIRED: 1, READY: 0, RECONCILED: blank
+
+# Check operator logs for TLS errors
+kubectl logs -n monitoring kube-prometheus-stack-operator-<pod> --tail=50
+# → Repeated "TLS handshake error ... tls: bad certificate"
+
+# Check if operator is reconciling (it wasn't - no reconcile logs)
+kubectl logs -n monitoring kube-prometheus-stack-operator-<pod> | grep -iE 'reconcil|sync'
+# → Empty
+```
+
+**Fix:**
+
+Restarting the operator deployment forced it to re-establish watches and reconcile all CRs from scratch:
+
+```bash
+kubectl rollout restart deployment kube-prometheus-stack-operator -n monitoring
+```
+
+Within seconds, the operator created the StatefulSets for both Prometheus and Alertmanager, and both pods started initializing:
+
+```
+alertmanager-kube-prometheus-stack-alertmanager-0   0/2   PodInitializing
+prometheus-kube-prometheus-stack-prometheus-0        0/2   PodInitializing
+```
+
+**Timeline:**
+| Time (IST) | Event |
+|---|---|
+| ~18:27 | Main app sync completed, all resources "Synced" |
+| ~18:27-18:38 | App stuck in "Progressing" — Prometheus/Alertmanager pods never created |
+| ~18:38 | Diagnosed: operator TLS errors during startup, CRs not reconciled |
+| ~18:38 | Ran `kubectl rollout restart deployment kube-prometheus-stack-operator -n monitoring` |
+| ~18:39 | Prometheus and Alertmanager StatefulSets created, pods initializing |
+
 ## Lessons Learned
 
 1. **ServerSideApply alone is not sufficient.** While SSA avoids the annotation size issue, ArgoCD only applies SSA on a per-resource basis. The first sync attempt still tried client-side apply for some resources before SSA kicked in. A dedicated CRDs app with SSA ensures CRDs are always applied server-side.
@@ -162,6 +224,12 @@ crds:
 
 5. **ArgoCD multi-source for Helm + Git values.** Using the `sources` field with a `ref: values` git source allows referencing local values files from the same repo while deploying from an external Helm chart repo.
 
+6. **Prometheus Operator can stall after initial deployment.** If the operator experiences TLS webhook errors during startup, it may fail to reconcile Prometheus/Alertmanager CRs. The CRs will exist with empty `.status` and no pods will be created. A simple operator pod restart triggers full reconciliation and resolves the stall.
+
+7. **Check `.status` on CRs, not just `kubectl get pods`.** When Prometheus/Alertmanager pods are missing, checking the CR's status field (empty vs populated) immediately reveals whether the operator has reconciled it. No status = operator hasn't processed it.
+
+8. **TLS handshake errors in operator logs are normal during startup** — the K8s API server probes the webhook endpoint before the operator is ready. However, if these errors coincide with the initial CR creation window, the operator may silently skip reconciliation.
+
 ## Action Items
 
 - [x] Create `apps/kube-prometheus-stack-crds.yaml` with sync-wave 0 and SSA
@@ -171,3 +239,4 @@ crds:
 - [x] Add `ServerSideApply=true` to both Applications
 - [ ] Verify both Applications sync successfully after push
 - [ ] Monitor for any residual SharedResourceWarning between the two apps
+- [x] Diagnosed and resolved: Prometheus Operator stall after initial sync — restarted operator deployment to trigger CR reconciliation
