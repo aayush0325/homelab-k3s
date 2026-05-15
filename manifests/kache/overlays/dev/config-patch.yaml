@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kache-config
+data:
+  REDIS_URLS: "redis-statefulset-0.redis-service-headless:6379"
+  REPLICATION_FACTOR: "1"

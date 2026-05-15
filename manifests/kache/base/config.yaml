@@ -2,12 +2,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: kache-config
-  namespace: kache
 data:
   REDIS_URLS: "redis-statefulset-0.redis-service-headless:6379,redis-statefulset-1.redis-service-headless:6379,redis-statefulset-2.redis-service-headless:6379"
   VNODES_PER_NODE: "100"
   PING_INTERVAL_SECONDS: "3"
   MAX_TRIES: "3"
   REPLICATION_FACTOR: "3"
-
----
