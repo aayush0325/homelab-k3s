@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mix-design-deployment
+  labels:
+    app: mix-design
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mix-design
+  template:
+    metadata:
+      labels:
+        app: mix-design
+    spec:
+      containers:
+      - name: mix-design
+        image: aayush0325/mix-design:v1.0
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "500m"
+          limits:
+            memory: "256Mi"
+            cpu: "1"
+        ports:
+        - containerPort: 3000
