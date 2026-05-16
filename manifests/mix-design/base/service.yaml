@@ -5,8 +5,7 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-    matchLabels:
-      app: mix-design
+    app: mix-design
   ports:
   - protocol: http
     targetPort: 3000
