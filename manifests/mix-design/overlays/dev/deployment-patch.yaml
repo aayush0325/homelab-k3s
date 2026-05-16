@@ -9,9 +9,9 @@ spec:
       containers:
         - name: mix-design
           resources:
-          requests:
-            memory: "128Mi"
-            cpu: "500m"
-          limits:
-            memory: "256Mi"
-            cpu: "1"
+            requests:
+              memory: "128Mi"
+              cpu: "500m"
+            limits:
+              memory: "256Mi"
+              cpu: "1"
